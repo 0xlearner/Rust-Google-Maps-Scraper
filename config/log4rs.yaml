@@ -1,0 +1,46 @@
+refresh_rate: 30 seconds
+
+appenders:
+  stdout:
+    kind: console
+    encoder:
+      pattern: "{d} {l} {M} - {m}{n}"
+
+  info_file:
+    kind: file
+    path: "./logs/info.log"
+    append: true
+    encoder:
+      pattern: "{d} {l} {M} - {m}{n}"
+
+  error_file:
+    kind: file
+    path: "./logs/error.log"
+    append: true
+    encoder:
+      pattern: "{d} {l} {M} - {m}{n}"
+
+  debug_file:
+    kind: file
+    path: "./logs/debug.log"
+    append: true
+    encoder:
+      pattern: "{d} {l} {M} - {m}{n}"
+root:
+  level: info
+  appenders:
+    - stdout
+    - info_file
+
+loggers:
+  errors:
+    level: error
+    appenders:
+      - error_file
+    additive: false
+
+  debug:
+    level: debug
+    appenders:
+      - debug_file
+    additive: false
