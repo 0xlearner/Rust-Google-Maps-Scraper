@@ -21,23 +21,24 @@ use tokio::time::{sleep, Duration};
 
 pub async fn run() -> Result<(), AppError> {
     init_logger();
-    dotenv().ok(); // Load .env file
+    // Load .env file
+    dotenv().ok();
     let api_key = env::var("GOOGLE_MAPS_API_KEY").expect("API key not found");
     let grid_query = "Karachi";
     let query = "restraunts north nazimabad";
-    let start = 20;
+    let start = 200;
 
     log::info!("Starting search for location: {}", grid_query);
     let result = search_location(&api_key, grid_query).await?;
-
-    log::info!("Extracting viewport from search results"); // Extract the viewport from the first result
+    // Extract the viewport from the first result
+    log::info!("Extracting viewport from search results");
     let viewport = Viewport::extract_viewport(&result)?;
     log::info!("Northeast: {:?}", viewport.northeast);
     log::info!("Southwest: {:?}", viewport.southwest);
-
-    log::info!("Generating 5x5 grid"); // Generate a 5x5 grid
-    let grid = generate_grid(&viewport, 5, 5);
-    crate::debug_log!("5x5 Grid: {:?}", grid);
+    // Generate a 15x15 grid
+    log::info!("Generating 15x15 grid");
+    let grid = generate_grid(&viewport, 15, 15);
+    crate::debug_log!("15x15 Grid: {:?}", grid);
 
     log::info!("Initializing HTTP client and shared state");
     let client = reqwest::Client::new();
@@ -51,8 +52,9 @@ pub async fn run() -> Result<(), AppError> {
     // Flatten the grid into a single vector of (lat, long) tuples
     let grid_points: Vec<(f64, f64)> = grid.into_iter().flatten().collect();
 
-    log::info!("Processing grid points in parallel"); // Process grid points in parallel with a rate limit of 5 requests per second
-    for chunk in grid_points.chunks(5) {
+    // Process grid points in parallel with a rate limit of 5 requests per second
+    log::info!("Processing {} grid points in parallel", grid_points.len());
+    for chunk in grid_points.chunks(10) {
         let mut chunk_tasks = Vec::new();
         for &(lat, long) in chunk {
             let url = build_url(lat, long, start, query);
@@ -88,11 +90,11 @@ pub async fn run() -> Result<(), AppError> {
             });
             chunk_tasks.push(task);
         }
-
-        log::info!("Waiting for tasks in the current chunk to complete"); // Wait for all tasks in the current chunk to complete
+        // Wait for all tasks in the current chunk to complete
+        log::info!("Waiting for tasks in the current chunk to complete");
         join_all(chunk_tasks).await;
-
-        log::info!("Sleeping for 1 second to enforce rate limit"); // Sleep for 1 second to enforce the rate limit
+        // Sleep for 1 second to enforce the rate limit
+        log::info!("Sleeping for 1 second to enforce rate limit");
         sleep(Duration::from_secs(1)).await;
     }
 
